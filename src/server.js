@@ -3,7 +3,7 @@ const AppError = require('./utils/AppError');
 const routes = require('./routes');
 const PORT = 3333;
 const express = require('express')
-const database = require('./database/sqlite');
+const database = require('./database/sqlite/migrations');
 
 
 const app = express();
