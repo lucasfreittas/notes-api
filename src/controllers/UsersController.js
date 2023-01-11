@@ -1,6 +1,6 @@
 const AppError = require('../utils/AppError');
 const sqlConnection = require('../database/sqlite')
-const { hash } = require('bcryptjs');
+const { hash, compare } = require('bcryptjs');
 
 class UsersController{
     async create(request, response){
@@ -29,6 +29,63 @@ class UsersController{
 
         
     };
+
+    async update(request, response){
+        const {name, email, password, old_password} = request.body;
+        const {id} = request.params;
+
+        //Conectando ao banco de dados
+        const database = await sqlConnection();
+
+        //Pegando todos os usuários que contém esse ID recebido 
+        const user = await database.get('SELECT * FROM users WHERE id = (?)', [id]);
+
+        //Checando se o usuário  existe
+        if(!user){
+            throw new AppError('Usuário não cadastrado');
+        }
+
+        //Pegando todos os uruários que contenham o email recebido
+        const emailUser = await database.get('SELECT * FROM users WHERE email = (?)', [email]);
+
+        //Se o id do usuário selecionado pelo email for diferente do id do usuário selecionado pelo id, então erro
+        if(emailUser && emailUser.id !== user.id){
+            throw new AppError('Este e-mail já está em uso')
+        };
+
+        //Verificações para mudança de senha
+        if(password && !old_password ){
+            throw new AppError('Você precisa informar a senha antiga')
+        }
+
+        if(password && old_password){
+            const checkPassword = await compare(old_password, user.password);
+            if(!checkPassword){
+                throw new AppError ('A senha antiga não confere')
+            }
+
+            user.password = await hash(password, 8);
+
+        }
+
+        //Colocando as informações novas em constantes, caso elas não sejam preenchidas manter as antigas
+        const updatedName = name ?? user.name;
+        const updatedEmail = email ?? user.email;
+        const updatedPassword = user.password
+
+        //Passando a ordem para o banco de dados atualizar o email e nome
+        await database.run(`
+            UPDATE users SET
+            name = ?,
+            email = ?,
+            password = ?,
+            updated_at = DATETIME('now')
+            WHERE id = ?`,
+            [updatedName, updatedEmail, updatedPassword, id]
+        );
+
+        return response.json()
+    }
 };
 
 module.exports = UsersController
