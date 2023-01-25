@@ -32,13 +32,13 @@ class UsersController{
 
     async update(request, response){
         const {name, email, password, old_password} = request.body;
-        const {id} = request.params;
+        const user_id = request.user.id;
 
         //Conectando ao banco de dados
         const database = await sqlConnection();
 
         //Pegando todos os usuários que contém esse ID recebido 
-        const user = await database.get('SELECT * FROM users WHERE id = (?)', [id]);
+        const user = await database.get('SELECT * FROM users WHERE id = (?)', [user_id]);
 
         //Checando se o usuário  existe
         if(!user){
@@ -81,7 +81,7 @@ class UsersController{
             password = ?,
             updated_at = DATETIME('now')
             WHERE id = ?`,
-            [updatedName, updatedEmail, updatedPassword, id]
+            [updatedName, updatedEmail, updatedPassword, user_id]
         );
 
         return response.json()
